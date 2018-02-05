@@ -42,4 +42,3 @@ When you read from the database it will be read from a hashmap, which will be lo
 | ------------- | ------------- |
 | Same key  | If you add two entries with the same key, it will only find the latest one you inserted  |
 | Keep running program  | The program is very static and can't be kept alive to keep inserting and getting items  |
-| Content Cell  | Content Cell  |
