@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"strconv"
 )
 
 var autoincrement = 0
@@ -25,38 +26,64 @@ func init() {
 	}
 }
 
-func insert(key, value string) {
-	file, err := os.OpenFile("database.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+func index(key string, offset int64, length int) {
+	file, err := os.OpenFile("index.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	check(err)
-	insertion := "" + key + ":" + value + ""
-
+	fmt.Println("Offset: ", offset)
+	fmt.Println("Length: ", length)
+	insertion := "" + key + ":" + strconv.Itoa(int(offset)) + ":" + strconv.Itoa(int(length)) + ""
 	defer file.Close()
 
 	file.WriteString(insertion)
 	file.WriteString("\r\n")
-	fmt.Println("Inserted key: " + key)
-	fmt.Println("Inserted value: " + value)
-	fmt.Println("==> Done Writing to file...")
+	fmt.Println("==> Done writing to index file...")
+}
+
+
+func insert(key, value string) {
+	file, err := os.OpenFile("database.db", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	check(err)
+	defer file.Close()
+
+	insertion := "" + key + ":" + value + ","
+	convertToByte := []byte(insertion)
+	
+	// Offset is how many bytes to move
+    // Offset can be positive or negative
+    var offset int64 = 0
+
+    // Whence is the point of reference for offset
+    // 0 = Beginning of file
+    // 1 = Current position
+    // 2 = End of file
+    var whence int = 2
+
+    currentPosition, err := file.Seek(offset, whence)
+    check(err)
+    fmt.Println("Position: ", currentPosition)
+    // Add to index file
+    index(key, currentPosition, len(convertToByte))
+
+	fmt.Println("Bytes: ", convertToByte)
+	file.Write(convertToByte)
+	fmt.Println("==> Done writing to database file...")
 }
 
 func read(keyArg string) {
-	readFile, err := os.Open("database.txt")
+	readFile, err := os.Open("index.txt")
 	check(err)
 	defer readFile.Close()
 
 	reader := bufio.NewReader(readFile)
 
-	m := make(map[string]string)
+	m := make(map[string][]string)
 	for {
 		line, err := reader.ReadString('\n')
+		line = strings.TrimRight(line, "\r\n")
 		if len(line) != 0 {
-
-			fmt.Println(line)
 			s := strings.Split(line, ":")
-			key, value := s[0], s[1]
-			//fmt.Println("Key: " + key)
-			//fmt.Println("Value: " + value)
-			m[key] = value
+			key, index, length := s[0], s[1], s[2]
+			m[key] = []string{string(index), string(length)}
 			check(err)
 		}
 		if err != nil {
@@ -64,15 +91,35 @@ func read(keyArg string) {
 		}
 	}
 
-	fmt.Printf("Map: %#v\n", m[keyArg])
-	/*
-		if err := json.Unmarshal(read, &m); err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
-		fmt.Println(read)
-		fmt.Printf("Map: %#v\n", m)
-	*/
+	fmt.Println("Key Argument: " + keyArg)
+	//fmt.Printf("Map: %#v\n", m[keyArg])
+
+	// Gets value from key and converts it to an integer, so it can be passed to the database function
+	i := m[keyArg][0]
+	l := m[keyArg][1]
+	//fmt.Println("Data Index: ", i)
+	//fmt.Println("Data Length: ", l)
+	indexConvert, err := strconv.Atoi(i)
+	check(err)
+	lengthConvert, err := strconv.Atoi(l)
+	check(err)
+	readDatabase(indexConvert, lengthConvert)
+}
+
+func readDatabase(index, length int) {
+	file, err := os.Open("database.db")
+	check(err)
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	check(err)
+	//fmt.Println("Data Length: ", len(data))
+	//fmt.Println("Data Sliced Length: ", len(data[index:]))
+	// Calculating the slice of the bytes needed to return the key/value pair
+	result := (len(data) - len(data[index:])) + length
+	s := string(data[index:result])
+	finalResult := strings.Split(strings.TrimRight(s, ","), ":")
+	fmt.Println("Result: ", finalResult[1])
 }
 
 func main() {
@@ -91,18 +138,6 @@ func main() {
 	readCmd := flag.NewFlagSet("read", flag.ExitOnError)
 	get := readCmd.String("get", "", "Used to retrieve data from the database file")
 
-	/*
-		readFile, err := ioutil.ReadFile("AtID.txt")
-
-		convert := string(readFile[:])
-		fmt.Println(convert)
-		number, err := strconv.ParseInt(convert, 10, 0)
-		check(err)
-
-		if number == 1 {
-			fmt.Println(true)
-		}
-	*/
 	switch os.Args[1] {
 	case "insert":
 		err := insertCmd.Parse(os.Args[2:])
