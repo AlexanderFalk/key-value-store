@@ -19,7 +19,7 @@ When you read from the database it will be read from a hashmap, which will be lo
 
 ### Windows
 
-* Download the program.exe file. 
+* Download the [program.exe](https://github.com/AlexanderFalk/key-value-store/raw/master/program.exe) file. 
 * Press WindowsButton + R. Enter: "CMD". Press Enter.
 * Navigate to the destination of the downloaded file
 * To insert data, write: ``` Program.exe insert --key "<INSERT KEY>" --value "<INSERT VALUE>" ```
@@ -28,7 +28,7 @@ When you read from the database it will be read from a hashmap, which will be lo
 
 ### UNIX / Linux / MacOS
 
-* Download program.go
+* Download [program.go](https://github.com/AlexanderFalk/key-value-store/archive/master.zip) - Will download everything in a zip file
 * Open a terminal
 * Navigate to the destination of the downloaded file
 * Compile the program with Go: ```go build program.go```
